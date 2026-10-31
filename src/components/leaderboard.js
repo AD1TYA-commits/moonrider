@@ -3,6 +3,7 @@ const pr = require('profane-words');
 require('firebase/firestore');
 
 const NUM_SCORES_DISPLAYED = 10;
+const LOCAL_SCORES_KEY = 'moonrider-scores';
 const ba = /(fuc)|(ass)|(nig)|(shit)|(retard)/gi;
 
 // TODO! Support beatmapCharacteristic in here
@@ -83,7 +84,7 @@ AFRAME.registerComponent('leaderboard', {
   addScore: function () {
     const state = this.el.sceneEl.systems.state.state;
 
-    if (!state.isVictory || !state.inVR) { return; }
+    if (!state.isVictory) { return; }
 
     const scoreData = {
       accuracy: state.score.accuracy,
@@ -95,10 +96,12 @@ AFRAME.registerComponent('leaderboard', {
       time: new Date()
     };
 
-    if (!pr.includes(this.username.toLowerCase()) &&
-      !this.username.match(ba)) {
-      this.db.add(scoreData);
-    }
+    if (pr.includes(this.username.toLowerCase()) || this.username.match(ba)) { return; }
+
+    const localScores = JSON.parse(localStorage.getItem(LOCAL_SCORES_KEY) || '[]');
+    localScores.push(Object.assign({}, scoreData, {time: scoreData.time.toISOString()}));
+    localStorage.setItem(LOCAL_SCORES_KEY, JSON.stringify(localScores));
+    if (this.db) { this.db.add(scoreData); }
 
     this.addEventDetail.scoreData = scoreData;
     this.el.emit('leaderboardscoreadded', this.addEventDetail, false);
@@ -108,27 +111,20 @@ AFRAME.registerComponent('leaderboard', {
     if (this.data.gameMode === 'ride') { return; }
 
     const state = this.el.sceneEl.systems.state.state;
-    const query = this.db
-      .where('challengeId', '==', challengeId)
-      .where(
-        'difficulty', '==',
-        state.menuSelectedChallenge.id
-          ? state.menuSelectedChallenge.difficulty
-          : state.challenge.difficulty)
-      .where('gameMode', '==', this.data.gameMode)
-      .orderBy('score', 'desc')
-      .orderBy('time', 'asc')
-      .limit(10);
-    query.get().then(snapshot => {
-      this.eventDetail.challengeId = challengeId;
-      this.scores.length = 0;
-      if (!snapshot.empty) {
-        snapshot.forEach(score => this.scores.push(score.data()));
-      }
-      this.el.sceneEl.emit('leaderboard', this.eventDetail, false);
-    }).catch(e => {
-      console.error('[firestore]', e);
-    });
+    const difficulty = state.menuSelectedChallenge.id
+      ? state.menuSelectedChallenge.difficulty
+      : state.challenge.difficulty;
+    const localScores = JSON.parse(localStorage.getItem(LOCAL_SCORES_KEY) || '[]')
+      .filter(score => score.challengeId === challengeId &&
+        score.difficulty === difficulty && score.gameMode === this.data.gameMode);
+    localScores.sort((a, b) => b.score - a.score || new Date(a.time) - new Date(b.time));
+    this.setScores(challengeId, localScores.slice(0, NUM_SCORES_DISPLAYED));
+  },
+
+  setScores: function (challengeId, scores) {
+    this.eventDetail.challengeId = challengeId;
+    this.scores.splice(0, this.scores.length, ...scores);
+    this.el.sceneEl.emit('leaderboard', this.eventDetail, false);
   },
 
   /**

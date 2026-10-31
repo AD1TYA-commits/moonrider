@@ -449,7 +449,7 @@ AFRAME.registerState({
     },
 
     leaderboardqualify: state => {
-      if (!state.has6DOFVR) { return; }
+      if (!state.has6DOFVR && state.gameMode !== 'punch') { return; }
       state.leaderboardQualified = true;
     },
 
@@ -458,13 +458,19 @@ AFRAME.registerState({
      */
     leaderboardscoreadded: (state, payload) => {
       // Insert.
+      let inserted = false;
       for (let i = 0; i < state.leaderboard.length; i++) {
         if (payload.scoreData.score >= state.leaderboard[i].score ||
           i >= state.leaderboard.length - 1) {
           state.leaderboard.splice(i, 0, payload.scoreData);
+          inserted = true;
           break;
         }
       }
+      if (!inserted && state.leaderboard.length < NUM_LEADERBOARD_DISPLAY) {
+        state.leaderboard.push(payload.scoreData);
+      }
+      state.leaderboard.length = Math.min(state.leaderboard.length, NUM_LEADERBOARD_DISPLAY);
 
       state.leaderboardNames = '';
       state.leaderboardScores = '';
@@ -732,7 +738,7 @@ AFRAME.registerState({
       gtag('event', 'songcomplete', { event_label: state.gameMode });
 
       // Move back to menu in Ride or Viewer Mode.
-      if (state.gameMode === 'ride' || !state.inVR) {
+      if (state.gameMode === 'ride' || (!state.inVR && state.gameMode !== 'punch')) {
         state.challenge.isBeatsPreloaded = false;
         state.isVictory = false;
         state.menuActive = true;
