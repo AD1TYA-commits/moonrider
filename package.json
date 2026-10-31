@@ -2,7 +2,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider NODE_ENV=production webpack",
+    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider NODE_ENV=production webpack && shx rm -rf dist && shx mkdir -p dist && shx cp index.html dist/ && shx cp -r assets build vendor dist/",
     "deploy": "npm run predeploy && ghpages git@github.com:supermedium/moonrider.git -p .ghpages && rm -rf .ghpages",
     "lint": "semistandard -v | snazzy",
     "lint:fix": "semistandard --fix",

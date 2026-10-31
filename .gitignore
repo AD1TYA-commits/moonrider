@@ -45,6 +45,7 @@ exports/
 
 dump.rdb
 .ghpages
+/dist
 
 #Idea Project Files
 idea/
