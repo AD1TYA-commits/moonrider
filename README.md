@@ -3,6 +3,7 @@ moonrider uses an older webpack4 that is incompactible with newer node.js becaus
 to fix run -> 
 
 $env:NODE_OPTIONS="--openssl-legacy-provider"   ( windows )
+
 export NODE_OPTIONS="--openssl-legacy-provider" ( Linux )
 
 
